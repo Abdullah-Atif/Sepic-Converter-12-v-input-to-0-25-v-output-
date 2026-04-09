@@ -3,112 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced SEPIC Lab Tool - BUET EEE</title>
+    <title>Dynamic SEPIC Lab Tool - BUET EEE</title>
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
-        .card { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-        h2 { text-align: center; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
-        h3 { color: var(--accent); margin-top: 25px; font-size: 1.1rem; border-left: 4px solid var(--accent); padding-left: 10px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .result-box { background: #eef9ff; padding: 15px; border-radius: 8px; margin-top: 15px; }
-        .res-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; }
-        .val { font-weight: bold; color: #e67e22; }
-        .footer-note { font-size: 0.75rem; color: #7f8c8d; margin-top: 20px; font-style: italic; border-top: 1px dashed #ccc; padding-top: 10px; }
+        :root { --primary: #1a252f; --accent: #2980b9; --bg: #fdfefe; --warn: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eaeff2; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 650px; padding: 35px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border-top: 8px solid var(--accent); }
+        h2 { text-align: center; color: var(--primary); margin-top: 0; }
+        .section-title { color: var(--accent); border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 25px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #34495e; }
+        input { width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; box-sizing: border-box; transition: 0.3s; font-weight: bold; }
+        input:focus { border-color: var(--accent); outline: none; }
+        .res-box { background: #f4faff; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #d6eaf8; }
+        .res-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'Consolas', monospace; }
+        .val { font-weight: bold; color: #c0392b; }
+        .warning-box { font-size: 0.8rem; margin-top: 15px; padding: 12px; border-radius: 8px; display: none; }
+        .safety-green { background: #d4edda; color: #155724; border-left: 5px solid #28a745; }
+        .safety-red { background: #f8d7da; color: #721c24; border-left: 5px solid var(--warn); display: block; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>SEPIC Advanced Design Tool</h2>
+    <h2>⚡ SEPIC Project Advanced Calc</h2>
 
-    <h3>1. Basic Parameters (Arduino Link)</h3>
+    <div class="section-title">1. Hardware Settings</div>
     <div class="grid">
         <div>
             <label>Input Voltage (Vin) [V]</label>
-            <input type="number" id="vin" value="12" oninput="calcAll()">
+            <input type="number" id="vin" value="12" oninput="runCalc()">
+        </div>
+        <div>
+            <label>Load Resistor (Min 10Ω)</label>
+            <input type="number" id="loadR" value="33" min="10" step="1" oninput="runCalc()">
         </div>
         <div>
             <label>Duty Cycle (%) [0-72]</label>
-            <input type="number" id="duty" value="50" min="0" max="72" oninput="calcAll()">
+            <input type="number" id="duty" value="72" min="0" max="72" oninput="runCalc()">
         </div>
-    </div>
-
-    <h3>2. Method A: Find L (Given Ripple)</h3>
-    <div class="grid">
         <div>
-            <label>Target Ripple (ΔIL) [A]</label>
-            <input type="number" id="targetRipple" value="0.01" step="0.001" oninput="calcAll()">
-        </div>
-        <div class="result-box" style="margin-top:0">
-            <div class="res-row"><span>Required L:</span> <span class="val" id="reqL">0 uH</span></div>
+            <label>Primary Inductor (L1) [uH]</label>
+            <input type="number" id="lValue" value="70" oninput="runCalc()">
         </div>
     </div>
 
-    <h3>3. Method B: Find Ripple (Given L)</h3>
-    <div class="grid">
-        <div>
-            <label>Inductor Value (L1) [uH]</label>
-            <input type="number" id="lValue" value="70" oninput="calcAll()">
-        </div>
-        <div class="result-box" style="margin-top:0">
-            <div class="res-row"><span>Current Ripple:</span> <span class="val" id="currRipple">0 A</span></div>
-        </div>
-    </div>
+    <div id="alertBox" class="warning-box"></div>
 
-    <h3>4. System Component Ratings</h3>
-    <div class="result-box">
+    <div class="section-title">2. Real-time Output Data</div>
+    <div class="res-box">
         <div class="res-row"><span>Output Voltage (Vout):</span> <span class="val" id="vout">0 V</span></div>
-        <div class="res-row"><span>Peak Diode Current (Id_max):</span> <span class="val" id="idmax">0 A</span></div>
-        <div class="res-row"><span>Arduino OCR1A (10kHz):</span> <span class="val" id="ocr1a">0</span></div>
+        <div class="res-row"><span>Output Current (Iout):</span> <span class="val" id="iout">0 A</span></div>
+        <div class="res-row"><span>Avg Input Current (Iin):</span> <span class="val" id="iin">0 A</span></div>
     </div>
 
-    <div class="footer-note">
-        * Design assumptions: Freq = 10kHz, Diode Drop = 0.6V.<br>
-        * Formula for L: L = (Vin * D) / (ΔIL * Fsw)
+    <div class="section-title">3. Component Stress Levels</div>
+    <div class="res-box">
+        <div class="res-row"><span>Ripple Current (ΔIL):</span> <span class="val" id="ripple">0 A</span></div>
+        <div class="res-row"><span>Diode Peak (Id_max):</span> <span class="val" id="idmax">0 A</span></div>
+        <div class="res-row"><span>Arduino OCR1A Value:</span> <span class="val" id="ocr">0</span></div>
     </div>
 </div>
 
 <script>
-    function calcAll() {
-        // Inputs
-        const vin = parseFloat(document.getElementById('vin').value) || 0;
-        const d = (parseFloat(document.getElementById('duty').value) || 0) / 100;
-        const targetRipple = parseFloat(document.getElementById('targetRipple').value) || 0.001;
-        const lValue = (parseFloat(document.getElementById('lValue').value) || 1) * 1e-6; // Convert to Henry
-        const fsw = 10000; // 10kHz
-        const iout_max = 0.04; // Your 40mA specification
+    function runCalc() {
+        let vin = parseFloat(document.getElementById('vin').value) || 0;
+        let rLoad = parseFloat(document.getElementById('loadR').value);
+        
+        // Force minimum 10 Ohm
+        if (rLoad < 10) {
+            rLoad = 10;
+            document.getElementById('loadR').value = 10;
+        }
 
-        // 1. Basic Output Voltage
+        const dInput = parseFloat(document.getElementById('duty').value) || 0;
+        const d = dInput / 100;
+        const lH = (parseFloat(document.getElementById('lValue').value) || 70) * 1e-6;
+        const fsw = 10000; 
+
+        // Calculations
         let vout = (vin * (d / (1 - d))) - 0.6;
         if (vout < 0) vout = 0;
+
+        let iout = vout / rLoad;
+        let iin = iout * (d / (1 - d));
+        let ripple = (vin * d) / (lH * fsw);
+        let id_peak = iin + iout + (ripple / 2);
+
+        // Display update
         document.getElementById('vout').innerText = vout.toFixed(2) + " V";
-
-        // 2. Method A: Calculate Required L
-        // Formula: L = (Vin * D) / (ΔIL * fsw)
-        let requiredL = (vin * d) / (targetRipple * fsw);
-        document.getElementById('reqL').innerText = (requiredL * 1e6).toFixed(1) + " uH";
-
-        // 3. Method B: Calculate Ripple from given L
-        // Formula: ΔIL = (Vin * D) / (L * fsw)
-        let ripple = (vin * d) / (lValue * fsw);
-        document.getElementById('currRipple').innerText = ripple.toFixed(3) + " A";
-
-        // 4. Diode Max Current (Peak)
-        // In SEPIC: Id_peak = Iin_avg + Iout + (ΔIL / 2)
-        // Iin_avg = Iout * (D / (1-D))
-        let iin_avg = iout_max * (d / (1 - d));
-        let id_peak = iin_avg + iout_max + (ripple / 2);
+        document.getElementById('iout').innerText = iout.toFixed(3) + " A";
+        document.getElementById('iin').innerText = iin.toFixed(3) + " A";
+        document.getElementById('ripple').innerText = ripple.toFixed(3) + " A";
         document.getElementById('idmax').innerText = id_peak.toFixed(3) + " A";
+        document.getElementById('ocr').innerText = Math.round(d * 199);
 
-        // 5. Arduino OCR1A
-        document.getElementById('ocr1a').innerText = Math.round(d * 199);
+        // Safety Warnings
+        let alert = document.getElementById('alertBox');
+        if (id_peak > 2.0) {
+            alert.style.display = "block";
+            alert.className = "warning-box safety-red";
+            alert.innerHTML = "<strong>CRITICAL:</strong> Peak current exceeds 2A! Ensure your inductors and wires can handle this load.";
+        } else if (id_peak > 1.0) {
+            alert.style.display = "block";
+            alert.className = "warning-box safety-red";
+            alert.style.background = "#fff3cd";
+            alert.style.color = "#856404";
+            alert.style.borderLeft = "5px solid #ffc107";
+            alert.innerHTML = "<strong>WARNING:</strong> Current is over 1A. Check component temperatures.";
+        } else {
+            alert.style.display = "none";
+        }
     }
-
-    // Run on load
-    calcAll();
+    runCalc();
 </script>
 
 </body>
