@@ -52,5 +52,6 @@ Used **Timer 1** of the Arduino Uno to generate a **Fast PWM** to minimize audib
 
 * **Input Voltage:** $12\text{V}$ DC.
 * **Output Range:** $0\text{V}$ to $30\text{V}$ DC.
-* **Max Load:** $33\Omega$ ($\sim 0.77\text{A}$ @ $72\%$ Duty).
+* **Load:** $33\Omega$ ($\sim 0.77\text{A}$ @ $72\%$ Duty).
+* **minimum load=$33\Omega$ **
 * **Efficiency ($\eta$):** $\approx 85\%$.
