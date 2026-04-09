@@ -22,6 +22,7 @@ Choosing the right components is critical for a SEPIC converter as it handles bo
 * **Primary Inductor ($L_1$):** $70\mu\text{H}$ (Ferrite Core to minimize losses).
 * **Secondary Inductor ($L_2$):** $30\mu\text{H}$ (Chosen based on saturation limits).
 * **Ripple Formula:** $$\Delta I_L = \frac{V_{in} \cdot D}{L \cdot f_{sw}}$$
+🔗 **[Launch inductance Calculator](https://coil32.net/online-calculators.html)**
 
 ---
 
