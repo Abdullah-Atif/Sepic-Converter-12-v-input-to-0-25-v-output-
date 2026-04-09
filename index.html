@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced SEPIC Design Pro - BUET EEE</title>
     <style>
-        :root { --primary: #1a252f; --accent: #2980b9; --bg: #f4f7f6; --code-bg: #2d3436; --val-color: #e67e22; }
+        :root { --primary: #1a252f; --accent: #2980b9; --bg: #f4f7f6; --code-bg: #2d3436; --val-color: #e67e22; --power-color: #27ae60; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
         .card { background: white; width: 100%; max-width: 750px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 10px solid var(--accent); }
         h2 { text-align: center; color: var(--primary); margin-bottom: 25px; }
@@ -16,6 +16,7 @@
         .res-box { background: #eef9ff; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #d1e9ff; }
         .res-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'Consolas', monospace; font-size: 0.95rem; }
         .val { font-weight: bold; color: var(--val-color); }
+        .pwr-val { font-weight: bold; color: var(--power-color); }
         .code-header { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; background: #34495e; color: white; padding: 10px 15px; border-radius: 8px 8px 0 0; }
         pre { background: var(--code-bg); color: #dfe6e9; padding: 15px; border-radius: 0 0 8px 8px; overflow-x: auto; font-size: 0.82rem; margin-top: 0; line-height: 1.5; }
         .copy-btn { background: #1abc9c; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: 0.3s; }
@@ -25,7 +26,7 @@
 <body>
 
 <div class="card">
-    <h2>⚡ SEPIC Advanced Design & Code Pro</h2>
+    <h2>⚡ SEPIC Advanced Design & Power Pro</h2>
 
     <div class="section-title">1. Design Inputs</div>
     <div class="grid">
@@ -46,16 +47,23 @@
             <input type="number" id="fsw" value="10000" oninput="runCalc()">
         </div>
         <div>
+            <label>Estimated Efficiency (%)</label>
+            <input type="number" id="eff" value="85" oninput="runCalc()">
+        </div>
+        <div>
             <label>Inductor L1 (uH)</label>
             <input type="number" id="lValue" value="70" oninput="runCalc()">
         </div>
-        <div>
-            <label>Allowed Ripple (%)</label>
-            <input type="number" id="rippleLimit" value="1" oninput="runCalc()">
-        </div>
     </div>
 
-    <div class="section-title">2. Capacitor & Diode Analysis</div>
+    <div class="section-title">2. Power & Efficiency Analysis</div>
+    <div class="res-box" style="background: #f0fff4; border-color: #c6f6d5;">
+        <div class="res-row"><span>Output Power (Pout):</span> <span class="pwr-val" id="pout">0 W</span></div>
+        <div class="res-row"><span>Input Power (Pin):</span> <span class="pwr-val" id="pin">0 W</span></div>
+        <div class="res-row"><span>Power Loss:</span> <span style="color: #e53e3e; font-weight: bold;" id="ploss">0 W</span></div>
+    </div>
+
+    <div class="section-title">3. Component & Capacitor Analysis</div>
     <div class="res-box">
         <div class="res-row"><span>Required Coupling Cap (C2):</span> <span class="val" id="c2Val">0 uF</span></div>
         <div class="res-row"><span>Required Filter Cap (C3):</span> <span class="val" id="c3Val">0 uF</span></div>
@@ -63,12 +71,12 @@
         <div class="res-row"><span>Peak Diode Current (Id_peak):</span> <span class="val" id="idPeak">0 A</span></div>
     </div>
 
-    <div class="section-title">3. System Output & Timer</div>
+    <div class="section-title">4. System Output & Timer</div>
     <div class="res-box" style="background: #fff8f0;">
         <div class="res-row"><span>Expected Output (Vout):</span> <span class="val" id="vout">0 V</span></div>
         <div class="res-row"><span>Output Current (Iout):</span> <span class="val" id="iout">0 A</span></div>
+        <div class="res-row"><span>Avg Input Current (Iin):</span> <span class="val" id="iin">0 A</span></div>
         <div class="res-row"><span>ICR1 (TOP Value):</span> <span class="val" id="icrVal">0</span></div>
-        <div class="res-row"><span>OCR1A (PWM Match):</span> <span class="val" id="ocrVal">0</span></div>
     </div>
 
     <div class="code-header">
@@ -84,42 +92,48 @@
         const rLoad = parseFloat(document.getElementById('loadR').value) || 1;
         const dNum = parseFloat(document.getElementById('duty').value) || 0;
         const fsw = parseFloat(document.getElementById('fsw').value) || 10000;
+        const eff = (parseFloat(document.getElementById('eff').value) || 85) / 100;
         const lH = (parseFloat(document.getElementById('lValue').value) || 70) * 1e-6;
-        const rippleLimit = (parseFloat(document.getElementById('rippleLimit').value) || 1) / 100;
 
         let d = dNum / 100;
+        
+        // --- Voltage & Current ---
         let vout = (vin * (d / (1 - d))) - 0.6;
         if (vout < 0) vout = 0;
         let iout = vout / rLoad;
-        let iin = iout * (d / (1 - d));
+        
+        // --- Power Calculations ---
+        let pOut = vout * iout;
+        let pIn = pOut / eff;
+        let pLoss = pIn - pOut;
+        let iInAvg = (vin > 0) ? (pIn / vin) : 0;
 
-        // --- Capacitor Calculations ---
-        // Coupling Cap (C2) Ripple voltage based: C = (Iout * D) / (fsw * deltaVc)
-        let deltaVc = vin * rippleLimit; 
+        // --- Capacitor & Stress ---
+        let deltaVc = vin * 0.01; 
         let c2 = (iout * d) / (fsw * deltaVc);
-
-        // Filter Cap (C3): C = Iout / (fsw * deltaVout)
-        let deltaVout = (vout > 0 ? vout : vin) * rippleLimit;
+        let deltaVout = (vout > 0 ? vout : vin) * 0.01;
         let c3 = iout / (fsw * deltaVout);
-
-        // --- Diode Stress ---
-        let vd_max = vin + vout + 0.6; // Max reverse voltage diode must handle
+        let vd_max = vin + vout + 0.6;
         let ripple = (vin * d) / (lH * fsw);
-        let id_peak = iin + iout + (ripple / 2);
+        let id_peak = iInAvg + iout + (ripple / 2);
 
-        // --- Timer Values ---
+        // --- Timer ---
         let icr1 = Math.round((16000000 / (fsw * 8)) - 1);
         let ocr1a = Math.round(d * icr1);
 
         // UI Update
+        document.getElementById('pout').innerText = pOut.toFixed(2) + " W";
+        document.getElementById('pin').innerText = pIn.toFixed(2) + " W";
+        document.getElementById('ploss').innerText = pLoss.toFixed(2) + " W";
         document.getElementById('c2Val').innerText = (c2 * 1e6).toFixed(2) + " uF";
         document.getElementById('c3Val').innerText = (c3 * 1e6).toFixed(2) + " uF";
         document.getElementById('vdMax').innerText = vd_max.toFixed(2) + " V";
         document.getElementById('idPeak').innerText = id_peak.toFixed(3) + " A";
         document.getElementById('vout').innerText = vout.toFixed(2) + " V";
         document.getElementById('iout').innerText = iout.toFixed(3) + " A";
+        document.getElementById('iin').innerText = iInAvg.toFixed(3) + " A";
         document.getElementById('icrVal').innerText = icr1;
-        document.getElementById('ocrVal').innerText = ocr1a;
+        document.getElementById('ocrVal').innerText = Math.round(d * icr1);
 
         const code = `// SEPIC PWM Controller
 // Freq: ${fsw}Hz | D_max: ${dNum}%
@@ -132,7 +146,7 @@ void setup() {
 }
 void loop() {
   int pot = analogRead(A0);
-  OCR1A = map(pot, 0, 1023, 0, ${ocr1a});
+  OCR1A = map(pot, 0, 1023, 0, ${Math.round(d * icr1)});
   delay(1);
 }`;
         document.getElementById('arduinoCode').innerText = code;
