@@ -17,9 +17,7 @@
         .res-box { background: #f4faff; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #d6eaf8; }
         .res-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'Consolas', monospace; }
         .val { font-weight: bold; color: #c0392b; }
-        .warning-box { font-size: 0.8rem; margin-top: 15px; padding: 12px; border-radius: 8px; display: none; }
-        .safety-green { background: #d4edda; color: #155724; border-left: 5px solid #28a745; }
-        .safety-red { background: #f8d7da; color: #721c24; border-left: 5px solid var(--warn); display: block; }
+        .warning-box { font-size: 0.85rem; margin-top: 15px; padding: 12px; border-radius: 8px; border-left: 5px solid #f1c40f; background: #fffde7; color: #856404; display: none; }
     </style>
 </head>
 <body>
@@ -34,8 +32,8 @@
             <input type="number" id="vin" value="12" oninput="runCalc()">
         </div>
         <div>
-            <label>Load Resistor (Min 10Ω)</label>
-            <input type="number" id="loadR" value="33" min="10" step="1" oninput="runCalc()">
+            <label>Load Resistor (Ω)</label>
+            <input type="number" id="loadR" value="33" oninput="runCalc()">
         </div>
         <div>
             <label>Duty Cycle (%) [0-72]</label>
@@ -68,23 +66,29 @@
     function runCalc() {
         let vin = parseFloat(document.getElementById('vin').value) || 0;
         let rLoad = parseFloat(document.getElementById('loadR').value);
-        
-        // Force minimum 10 Ohm
-        if (rLoad < 10) {
-            rLoad = 10;
-            document.getElementById('loadR').value = 10;
+        let alert = document.getElementById('alertBox');
+
+        // Warning for low resistance without forcing a change
+        if (rLoad < 10 && rLoad > 0) {
+            alert.style.display = "block";
+            alert.innerHTML = "<strong>Warning:</strong> Load resistance is below 10Ω. Calculation might not be accurate and Output Voltage will drop due to high power demand.";
+        } else if (rLoad <= 0) {
+            alert.style.display = "block";
+            alert.innerHTML = "<strong>Error:</strong> Resistance must be greater than 0.";
+        } else {
+            alert.style.display = "none";
         }
 
+        // Standard calculations continue even with low R
         const dInput = parseFloat(document.getElementById('duty').value) || 0;
         const d = dInput / 100;
         const lH = (parseFloat(document.getElementById('lValue').value) || 70) * 1e-6;
         const fsw = 10000; 
 
-        // Calculations
         let vout = (vin * (d / (1 - d))) - 0.6;
         if (vout < 0) vout = 0;
 
-        let iout = vout / rLoad;
+        let iout = (rLoad > 0) ? (vout / rLoad) : 0;
         let iin = iout * (d / (1 - d));
         let ripple = (vin * d) / (lH * fsw);
         let id_peak = iin + iout + (ripple / 2);
@@ -96,23 +100,6 @@
         document.getElementById('ripple').innerText = ripple.toFixed(3) + " A";
         document.getElementById('idmax').innerText = id_peak.toFixed(3) + " A";
         document.getElementById('ocr').innerText = Math.round(d * 199);
-
-        // Safety Warnings
-        let alert = document.getElementById('alertBox');
-        if (id_peak > 2.0) {
-            alert.style.display = "block";
-            alert.className = "warning-box safety-red";
-            alert.innerHTML = "<strong>CRITICAL:</strong> Peak current exceeds 2A! Ensure your inductors and wires can handle this load.";
-        } else if (id_peak > 1.0) {
-            alert.style.display = "block";
-            alert.className = "warning-box safety-red";
-            alert.style.background = "#fff3cd";
-            alert.style.color = "#856404";
-            alert.style.borderLeft = "5px solid #ffc107";
-            alert.innerHTML = "<strong>WARNING:</strong> Current is over 1A. Check component temperatures.";
-        } else {
-            alert.style.display = "none";
-        }
     }
     runCalc();
 </script>
