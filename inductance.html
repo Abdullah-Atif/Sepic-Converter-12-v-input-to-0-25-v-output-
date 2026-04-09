@@ -3,105 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inductor Designer Pro</title>
+    <title>Coil Designer - SWG Based</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; display: flex; justify-content: center; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 550px; }
-        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        label { font-size: 13px; font-weight: bold; color: #444; }
-        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }
-        .result-box { margin-top: 25px; background: #343a40; color: #fff; padding: 20px; border-radius: 8px; }
-        .res-row { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #454d55; padding-bottom: 5px; }
-        .value { color: #00d1b2; font-weight: bold; }
-        .warning { color: #ff3860; font-size: 12px; margin-top: 10px; display: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; padding: 20px; display: flex; justify-content: center; }
+        .app-card { background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .input-group { margin-top: 15px; }
+        .input-group label { display: block; font-size: 14px; font-weight: 600; color: #34495e; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        .result-container { margin-top: 25px; background: #2d3436; color: white; padding: 20px; border-radius: 10px; }
+        .result-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-family: monospace; }
+        .val { color: #55efc4; font-weight: bold; font-size: 16px; }
+        .highlight { border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 style="text-align:center; color:#2c3e50;">Inductor Turn Calculator</h2>
-    
-    <div>
-        <label>Target Inductance (µH)</label>
-        <input type="number" id="L" value="220" oninput="calculate()">
-    </div>
+<div class="app-card">
+    <h2>Inductor Turn Calc</h2>
 
-    <div class="input-grid">
-        <div>
-            <label>Outer Dia (mm)</label>
-            <input type="number" id="od" value="25" oninput="calculate()">
+    <div class="highlight">
+        <div class="input-group">
+            <label>Target Inductance (µH)</label>
+            <input type="number" id="L_target" value="100" oninput="updateDesign()">
         </div>
-        <div>
-            <label>Inner Dia (mm)</label>
-            <input type="number" id="id" value="15" oninput="calculate()">
-        </div>
-        <div>
-            <label>Height (mm)</label>
-            <input type="number" id="h" value="10" oninput="calculate()">
-        </div>
-        <div>
-            <label>Permeability (μᵣ)</label>
-            <input type="number" id="mur" value="2500" oninput="calculate()">
-        </div>
-        <div>
-            <label>Max Current (A)</label>
-            <input type="number" id="current" value="3" oninput="calculate()">
+        <div class="input-group">
+            <label>Max Current (Amps)</label>
+            <input type="number" id="I_max" value="2" oninput="updateDesign()">
         </div>
     </div>
 
-    <div class="result-box">
-        <div class="res-row"><span>Required Turns:</span> <span id="resN" class="value">0</span></div>
-        <div class="res-row"><span>Wire SWG:</span> <span id="resSWG" class="value">0</span></div>
-        <div class="res-row"><span>Wire Dia:</span> <span id="resDia" class="value">0 mm</span></div>
-        <div id="spaceWarn" class="warning">⚠️ Warning: Wire too thick for this core!</div>
+    <div class="input-group">
+        <label>Form/Core Diameter (mm)</label>
+        <input type="number" id="D_form" value="20" oninput="updateDesign()">
+    </div>
+
+    <div class="input-group">
+        <label>Wire SWG (Manual Override)</label>
+        <select id="swg_select" onchange="updateDesign()">
+            <option value="18">18 SWG (1.219 mm)</option>
+            <option value="20">20 SWG (0.914 mm)</option>
+            <option value="22" selected>22 SWG (0.711 mm)</option>
+            <option value="24">24 SWG (0.559 mm)</option>
+            <option value="26">26 SWG (0.457 mm)</option>
+            <option value="30">30 SWG (0.315 mm)</option>
+        </select>
+    </div>
+
+    <div class="result-container">
+        <div class="result-line"><span>Calculated Turns:</span> <span id="resN" class="val">0</span></div>
+        <div class="result-line"><span>Wire Diameter:</span> <span id="resDia" class="val">0 mm</span></div>
+        <div class="result-line"><span>Coil Length:</span> <span id="resLen" class="val">0 mm</span></div>
+        <div class="result-line"><span>Current Capacity:</span> <span id="resCap" class="val">0 A</span></div>
     </div>
 </div>
 
 <script>
-function calculate() {
-    const L = parseFloat(document.getElementById('L').value) || 0;
-    const od = parseFloat(document.getElementById('od').value) || 0;
-    const id = parseFloat(document.getElementById('id').value) || 0;
-    const h = parseFloat(document.getElementById('h').value) || 0;
-    const mur = parseFloat(document.getElementById('mur').value) || 0;
-    const current = parseFloat(document.getElementById('current').value) || 0;
+// SWG to Diameter (mm) Table
+const swgTable = {
+    "18": 1.219, "20": 0.914, "22": 0.711, "24": 0.559, "26": 0.457, "30": 0.315
+};
 
-    if (od <= id || L <= 0) return;
+function updateDesign() {
+    const L = parseFloat(document.getElementById('L_target').value) || 0;
+    const D = parseFloat(document.getElementById('D_form').value) || 0;
+    const swg = document.getElementById('swg_select').value;
+    const d_wire = swgTable[swg]; // Wire diameter in mm
 
-    // 1. Calculate Core Parameters
-    const Ae = ((od - id) / 2) * h; // mm^2
-    const le = Math.PI * ((od + id) / 2); // mm
-    const mu0 = 1.2566e-6;
+    if (L <= 0 || D <= 0) return;
+
+    /* Wheeler's Formula for Single-Layer Air Core:
+       L (uH) = (d^2 * n^2) / (18d + 40l)
+       Here, l = n * d_wire (winding length)
+    */
     
-    // AL calculation in nH/N^2
-    const AL = (mu0 * mur * (Ae * 1e-6) / (le * 1e-3)) * 1e9;
+    // Iterative calculation to find Turns (N) because N depends on Length which depends on N
+    let N = 10; // Initial guess
+    for(let i=0; i<10; i++) {
+        let length = N * d_wire; // Close-wound length
+        // Solving Wheeler's for N: N = sqrt( L * (18d + 40l) / d^2 )
+        // Note: d in formula is inches. Converting mm to inches:
+        let D_inch = D / 25.4;
+        let l_inch = length / 25.4;
+        N = Math.sqrt( (L * (18 * D_inch + 40 * l_inch)) / (D_inch * D_inch) );
+    }
+
+    const finalN = Math.ceil(N);
+    const finalLength = finalN * d_wire;
     
-    // 2. Turns calculation
-    const N = Math.ceil(Math.sqrt((L * 1000) / AL));
+    // Current Capacity (Approx 3A/mm2)
+    const area = Math.PI * Math.pow(d_wire/2, 2);
+    const capacity = area * 3;
 
-    // 3. Wire Diameter based on Current (3A/mm^2 density)
-    const wireArea = current / 3; 
-    const wireDia = Math.sqrt((4 * wireArea) / Math.PI);
-
-    // 4. SWG Calculation (Simplified Table Logic)
-    let swg = Math.round(18 - (wireDia - 1.2) * 5); 
-    if(wireDia < 0.2) swg = 36;
-    else if(wireDia < 0.5) swg = 25;
-    else if(wireDia < 1.0) swg = 20;
-
-    // 5. Space Check (Window Area vs Wire Area)
-    const windowArea = (Math.PI * Math.pow(id/2, 2));
-    const totalWireArea = N * wireArea * 2.5; // 2.5 is packing factor
-    const warn = document.getElementById('spaceWarn');
-    warn.style.display = (totalWireArea > windowArea) ? "block" : "none";
-
-    // Update Display
-    document.getElementById('resN').innerText = N;
-    document.getElementById('resSWG').innerText = swg;
-    document.getElementById('resDia').innerText = wireDia.toFixed(2) + " mm";
+    // Update UI
+    document.getElementById('resN').innerText = finalN;
+    document.getElementById('resDia').innerText = d_wire.toFixed(3);
+    document.getElementById('resLen').innerText = finalLength.toFixed(2);
+    document.getElementById('resCap').innerText = capacity.toFixed(2);
 }
 
-calculate(); // Initial run
+updateDesign();
 </script>
+
 </body>
 </html>
