@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferrite Core Inductor Designer - BUET EEE</title>
+    <style>
+        :root { --primary: #1a252f; --accent: #8e44ad; --bg: #f4f7f6; --res-bg: #fdfbf7; --val-color: #d35400; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 650px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 8px solid var(--accent); }
+        h2 { text-align: center; color: var(--primary); margin-top: 0; }
+        .section-title { color: var(--accent); border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 25px; font-weight: bold; font-size: 1.1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #444; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-weight: bold; font-size: 1rem; }
+        input:focus { border-color: var(--accent); outline: none; }
+        .res-box { background: var(--res-bg); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #f0e6d2; }
+        .res-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'Consolas', monospace; font-size: 1.1rem; align-items: center; }
+        .val { font-weight: bold; color: var(--val-color); font-size: 1.3rem; }
+        .formula-note { font-size: 0.8rem; color: #7f8c8d; margin-top: 10px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🧲 Ferrite Core Inductance Calc</h2>
+
+    <div class="section-title">Method 1: Using AL Value (Datasheet)</div>
+    <div class="grid">
+        <div>
+            <label>Inductance Factor (AL) [nH/N²]</label>
+            <input type="number" id="alValue" value="2500" oninput="calcAL()">
+        </div>
+        <div>
+            <label>Number of Turns (N)</label>
+            <input type="number" id="turnsAL" value="15" oninput="calcAL()">
+        </div>
+    </div>
+    <div class="res-box">
+        <div class="res-row"><span>Calculated Inductance (L):</span> <span class="val" id="resAL">0 µH</span></div>
+        <div class="formula-note">Formula: L = AL × N² (converted to µH)</div>
+    </div>
+
+    <div class="section-title">Method 2: Using Permeability & Dimensions</div>
+    <div class="grid">
+        <div>
+            <label>Relative Permeability (µr)</label>
+            <input type="number" id="muR" value="2000" oninput="calcPerm()">
+        </div>
+        <div>
+            <label>Effective Area (Ae) [mm²]</label>
+            <input type="number" id="area" value="50" oninput="calcPerm()">
+        </div>
+        <div>
+            <label>Magnetic Path Length (le) [mm]</label>
+            <input type="number" id="pathLen" value="40" oninput="calcPerm()">
+        </div>
+        <div>
+            <label>Number of Turns (N)</label>
+            <input type="number" id="turnsPerm" value="15" oninput="calcPerm()">
+        </div>
+    </div>
+    <div class="res-box" style="background: #eef9ff; border-color: #d1e9ff;">
+        <div class="res-row"><span>Calculated Inductance (L):</span> <span class="val" id="resPerm" style="color: #2980b9;">0 µH</span></div>
+        <div class="formula-note">Formula: L = (µ₀ × µr × N² × Ae) / le</div>
+    </div>
+
+</div>
+
+<script>
+    // Constants
+    const MU_0 = 4 * Math.PI * 1e-7; // Permeability of free space (H/m)
+
+    // Method 1 Calculation
+    function calcAL() {
+        const al = parseFloat(document.getElementById('alValue').value) || 0;
+        const n = parseFloat(document.getElementById('turnsAL').value) || 0;
+        
+        // L in nH = AL * N^2
+        let l_nH = al * (n * n);
+        let l_uH = l_nH / 1000;
+        
+        document.getElementById('resAL').innerText = l_uH.toFixed(2) + " µH";
+    }
+
+    // Method 2 Calculation
+    function calcPerm() {
+        const muR = parseFloat(document.getElementById('muR').value) || 0;
+        const ae_mm2 = parseFloat(document.getElementById('area').value) || 0;
+        const le_mm = parseFloat(document.getElementById('pathLen').value) || 0;
+        const n = parseFloat(document.getElementById('turnsPerm').value) || 0;
+
+        if (le_mm > 0) {
+            // Convert to meters
+            let ae_m2 = ae_mm2 * 1e-6;
+            let le_m = le_mm * 1e-3;
+
+            // Inductance in Henries: L = (u0 * ur * N^2 * Ae) / le
+            let l_henries = (MU_0 * muR * (n * n) * ae_m2) / le_m;
+            let l_uH = l_henries * 1e6;
+
+            document.getElementById('resPerm').innerText = l_uH.toFixed(2) + " µH";
+        } else {
+            document.getElementById('resPerm').innerText = "0 µH";
+        }
+    }
+
+    // Initialize calculations on load
+    calcAL();
+    calcPerm();
+</script>
+
+</body>
+</html>
