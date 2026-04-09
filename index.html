@@ -3,92 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arduino SEPIC Controller - Lab Tool</title>
+    <title>Advanced SEPIC Lab Tool - BUET EEE</title>
     <style>
-        :root { --primary: #007bff; --bg: #f4f7f6; --text: #333; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
-        .card { background: white; width: 100%; max-width: 450px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: var(--primary); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
-        input[type="number"], input[type="range"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        input[type="range"] { cursor: pointer; }
-        .result-container { background: #eef9ff; padding: 20px; border-radius: 10px; border-left: 5px solid var(--primary); margin-top: 25px; }
-        .result-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1rem; }
-        .value { font-weight: bold; color: #d35400; font-family: 'Courier New', Courier, monospace; }
-        .info { font-size: 0.8rem; color: #666; margin-top: 15px; line-height: 1.4; background: #fffde7; padding: 10px; border-radius: 5px; }
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        h2 { text-align: center; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        h3 { color: var(--accent); margin-top: 25px; font-size: 1.1rem; border-left: 4px solid var(--accent); padding-left: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .result-box { background: #eef9ff; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .res-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; }
+        .val { font-weight: bold; color: #e67e22; }
+        .footer-note { font-size: 0.75rem; color: #7f8c8d; margin-top: 20px; font-style: italic; border-top: 1px dashed #ccc; padding-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>SEPIC Lab Calculator</h2>
-    
-    <div class="input-group">
-        <label>Input Voltage (Vin) [V]</label>
-        <input type="number" id="vin" value="12" step="0.1" oninput="calc()">
-    </div>
+    <h2>SEPIC Advanced Design Tool</h2>
 
-    <div class="input-group">
-        <label>Adjust Duty Cycle (0 - 72%)</label>
-        <input type="range" id="dSlide" min="0" max="72" value="50" oninput="sync(this.value, 'num')">
-        <input type="number" id="dNum" min="0" max="72" value="50" oninput="sync(this.value, 'slide')" style="margin-top:10px">
-    </div>
-
-    <div class="result-container">
-        <div class="result-row">
-            <span>Output Voltage (Vout):</span>
-            <span class="value" id="vout">0.00 V</span>
+    <h3>1. Basic Parameters (Arduino Link)</h3>
+    <div class="grid">
+        <div>
+            <label>Input Voltage (Vin) [V]</label>
+            <input type="number" id="vin" value="12" oninput="calcAll()">
         </div>
-        <div class="result-row">
-            <span>Arduino PWM (0-255):</span>
-            <span class="value" id="pwm">0</span>
-        </div>
-        <div class="result-row">
-            <span>Pot Value (0-1023):</span>
-            <span class="value" id="pot">0</span>
+        <div>
+            <label>Duty Cycle (%) [0-72]</label>
+            <input type="number" id="duty" value="50" min="0" max="72" oninput="calcAll()">
         </div>
     </div>
 
-    <div class="info">
-        <strong>Hardware Note:</strong><br>
-        • Target: 0-30V @ 40mA max.<br>
-        • Frequency: 10kHz (Arduino PWM).<br>
-        • MOSFET: IRLZ34N (Logic Level).
+    <h3>2. Method A: Find L (Given Ripple)</h3>
+    <div class="grid">
+        <div>
+            <label>Target Ripple (ΔIL) [A]</label>
+            <input type="number" id="targetRipple" value="0.01" step="0.001" oninput="calcAll()">
+        </div>
+        <div class="result-box" style="margin-top:0">
+            <div class="res-row"><span>Required L:</span> <span class="val" id="reqL">0 uH</span></div>
+        </div>
+    </div>
+
+    <h3>3. Method B: Find Ripple (Given L)</h3>
+    <div class="grid">
+        <div>
+            <label>Inductor Value (L1) [uH]</label>
+            <input type="number" id="lValue" value="70" oninput="calcAll()">
+        </div>
+        <div class="result-box" style="margin-top:0">
+            <div class="res-row"><span>Current Ripple:</span> <span class="val" id="currRipple">0 A</span></div>
+        </div>
+    </div>
+
+    <h3>4. System Component Ratings</h3>
+    <div class="result-box">
+        <div class="res-row"><span>Output Voltage (Vout):</span> <span class="val" id="vout">0 V</span></div>
+        <div class="res-row"><span>Peak Diode Current (Id_max):</span> <span class="val" id="idmax">0 A</span></div>
+        <div class="res-row"><span>Arduino OCR1A (10kHz):</span> <span class="val" id="ocr1a">0</span></div>
+    </div>
+
+    <div class="footer-note">
+        * Design assumptions: Freq = 10kHz, Diode Drop = 0.6V.<br>
+        * Formula for L: L = (Vin * D) / (ΔIL * Fsw)
     </div>
 </div>
 
 <script>
-    function sync(val, target) {
-        if(target === 'num') document.getElementById('dNum').value = val;
-        else document.getElementById('dSlide').value = val;
-        calc();
+    function calcAll() {
+        // Inputs
+        const vin = parseFloat(document.getElementById('vin').value) || 0;
+        const d = (parseFloat(document.getElementById('duty').value) || 0) / 100;
+        const targetRipple = parseFloat(document.getElementById('targetRipple').value) || 0.001;
+        const lValue = (parseFloat(document.getElementById('lValue').value) || 1) * 1e-6; // Convert to Henry
+        const fsw = 10000; // 10kHz
+        const iout_max = 0.04; // Your 40mA specification
+
+        // 1. Basic Output Voltage
+        let vout = (vin * (d / (1 - d))) - 0.6;
+        if (vout < 0) vout = 0;
+        document.getElementById('vout').innerText = vout.toFixed(2) + " V";
+
+        // 2. Method A: Calculate Required L
+        // Formula: L = (Vin * D) / (ΔIL * fsw)
+        let requiredL = (vin * d) / (targetRipple * fsw);
+        document.getElementById('reqL').innerText = (requiredL * 1e6).toFixed(1) + " uH";
+
+        // 3. Method B: Calculate Ripple from given L
+        // Formula: ΔIL = (Vin * D) / (L * fsw)
+        let ripple = (vin * d) / (lValue * fsw);
+        document.getElementById('currRipple').innerText = ripple.toFixed(3) + " A";
+
+        // 4. Diode Max Current (Peak)
+        // In SEPIC: Id_peak = Iin_avg + Iout + (ΔIL / 2)
+        // Iin_avg = Iout * (D / (1-D))
+        let iin_avg = iout_max * (d / (1 - d));
+        let id_peak = iin_avg + iout_max + (ripple / 2);
+        document.getElementById('idmax').innerText = id_peak.toFixed(3) + " A";
+
+        // 5. Arduino OCR1A
+        document.getElementById('ocr1a').innerText = Math.round(d * 199);
     }
 
-    function calc() {
-    const vin = parseFloat(document.getElementById('vin').value) || 0;
-    const dNum = parseFloat(document.getElementById('dNum').value);
-    const d = dNum / 100;
-    const icr1 = 199; // তোমার আরডুইনো কোড অনুযায়ী
-
-    // ১. ভোল্টেজ হিসাব (ডায়োড ড্রপসহ)
-    let vout = (vin * (d / (1 - d))) - 0.6;
-    if (vout < 0) vout = 0;
-
-    // ২. তোমার কোড অনুযায়ী OCR1A ভ্যালু
-    const ocr1a = Math.round(d * icr1);
-
-    // ৩. পটেনশিওমিটার ভ্যালু (০-১০২৩)
-    const pot = Math.round((dNum / 72) * 1023);
-
-    // ডিসপ্লে আপডেট
-    document.getElementById('vout').innerText = vout.toFixed(2) + " V";
-    document.getElementById('pwm').innerText = ocr1a + " (OCR1A)";
-    document.getElementById('pot').innerText = pot;
-}
-
-    // Initial run
-    calc();
+    // Run on load
+    calcAll();
 </script>
 
 </body>
