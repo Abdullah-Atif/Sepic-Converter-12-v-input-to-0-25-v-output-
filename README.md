@@ -22,6 +22,7 @@ Choosing the right components is critical for a SEPIC converter as it handles bo
 * **Primary Inductor ($L_1$):** $70\mu\text{H}$ (Ferrite Core to minimize losses).
 * **Secondary Inductor ($L_2$):** $30\mu\text{H}$ (Chosen based on saturation limits).
 * **Ripple Formula:** $$\Delta I_L = \frac{V_{in} \cdot D}{L \cdot f_{sw}}$$
+
 🔗 **[Launch inductance Calculator](https://coil32.net/online-calculators.html)**
 
 ---
@@ -53,5 +54,5 @@ Used **Timer 1** of the Arduino Uno to generate a **Fast PWM** to minimize audib
 * **Input Voltage:** $12\text{V}$ DC.
 * **Output Range:** $0\text{V}$ to $30\text{V}$ DC.
 * **Load:** $33\Omega$ ($\sim 0.77\text{A}$ @ $72\%$ Duty).
-* **minimum load=$33\Omega$ **
+* **Min Load**=$33\Omega$ 
 * **Efficiency ($\eta$):** $\approx 85\%$.
