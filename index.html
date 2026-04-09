@@ -5,74 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arduino SEPIC Controller - Lab Tool</title>
     <style>
-        body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; }
-        .card { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        label { display: block; margin: 15px 0 5px; font-weight: bold; color: #34495e; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .result-box { margin-top: 20px; padding: 15px; background: #e8f4fd; border-left: 5px solid #3498db; border-radius: 4px; }
-        .arduino-tip { font-size: 0.85rem; color: #666; margin-top: 10px; font-style: italic; }
+        :root { --primary: #007bff; --bg: #f4f7f6; --text: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 450px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--primary); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
+        input[type="number"], input[type="range"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        input[type="range"] { cursor: pointer; }
+        .result-container { background: #eef9ff; padding: 20px; border-radius: 10px; border-left: 5px solid var(--primary); margin-top: 25px; }
+        .result-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1rem; }
+        .value { font-weight: bold; color: #d35400; font-family: 'Courier New', Courier, monospace; }
+        .info { font-size: 0.8rem; color: #666; margin-top: 15px; line-height: 1.4; background: #fffde7; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>⚡ SEPIC Project Calculator</h2>
+    <h2>SEPIC Lab Calculator</h2>
     
-    <label>Input Voltage (V<sub>in</sub>) [V]</label>
-    <input type="number" id="vin" value="12" oninput="calculate()">
-
-    <label>Current Duty Cycle (%) [0-72]</label>
-    <input type="range" id="dutyRange" min="0" max="72" value="50" oninput="updateFromRange()">
-    <input type="number" id="dutyNum" min="0" max="72" value="50" oninput="updateFromNum()">
-
-    <label>Arduino Analog Mapping (0-1023)</label>
-    <input type="number" id="potVal" readonly>
-
-    <div class="result-box">
-        <strong>Expected Output (V<sub>out</sub>):</strong> 
-        <span id="voutResult" style="font-size: 1.5rem; color: #d35400;">0.00</span> V
+    <div class="input-group">
+        <label>Input Voltage (Vin) [V]</label>
+        <input type="number" id="vin" value="12" step="0.1" oninput="calc()">
     </div>
 
-    <div class="arduino-tip">
-        * Based on Arduino UNO @ 10kHz frequency. <br>
-        * Range: 0-72% Duty Cycle for 0-30V Output.
+    <div class="input-group">
+        <label>Adjust Duty Cycle (0 - 72%)</label>
+        <input type="range" id="dSlide" min="0" max="72" value="50" oninput="sync(this.value, 'num')">
+        <input type="number" id="dNum" min="0" max="72" value="50" oninput="sync(this.value, 'slide')" style="margin-top:10px">
+    </div>
+
+    <div class="result-container">
+        <div class="result-row">
+            <span>Output Voltage (Vout):</span>
+            <span class="value" id="vout">0.00 V</span>
+        </div>
+        <div class="result-row">
+            <span>Arduino PWM (0-255):</span>
+            <span class="value" id="pwm">0</span>
+        </div>
+        <div class="result-row">
+            <span>Pot Value (0-1023):</span>
+            <span class="value" id="pot">0</span>
+        </div>
+    </div>
+
+    <div class="info">
+        <strong>Hardware Note:</strong><br>
+        • Target: 0-30V @ 40mA max.<br>
+        • Frequency: 10kHz (Arduino PWM).<br>
+        • MOSFET: IRLZ34N (Logic Level).
     </div>
 </div>
 
 <script>
-    function updateFromRange() {
-        document.getElementById('dutyNum').value = document.getElementById('dutyRange').value;
-        calculate();
+    function sync(val, target) {
+        if(target === 'num') document.getElementById('dNum').value = val;
+        else document.getElementById('dSlide').value = val;
+        calc();
     }
 
-    function updateFromNum() {
-        document.getElementById('dutyRange').value = document.getElementById('dutyNum').value;
-        calculate();
-    }
+    function calc() {
+    const vin = parseFloat(document.getElementById('vin').value) || 0;
+    const dNum = parseFloat(document.getElementById('dNum').value);
+    const d = dNum / 100;
+    const icr1 = 199; // তোমার আরডুইনো কোড অনুযায়ী
 
-    function calculate() {
-        let vin = parseFloat(document.getElementById('vin').value);
-        let d = parseFloat(document.getElementById('dutyNum').value) / 100;
-        let vd = 0.5; // Diode Drop
+    // ১. ভোল্টেজ হিসাব (ডায়োড ড্রপসহ)
+    let vout = (vin * (d / (1 - d))) - 0.6;
+    if (vout < 0) vout = 0;
 
-        // Pot mapping for Arduino (0-1023 to 0-72%)
-        let pot = Math.round((d * 100 / 72) * 1023);
-        document.getElementById('potVal').value = pot;
+    // ২. তোমার কোড অনুযায়ী OCR1A ভ্যালু
+    const ocr1a = Math.round(d * icr1);
 
-        // SEPIC Formula: Vout = Vin * (D / (1 - D)) - Vd
-        let vout = 0;
-        if (d < 1) {
-            vout = (vin * (d / (1 - d))) - vd;
-        }
-        
-        if (vout < 0) vout = 0;
-        
-        document.getElementById('voutResult').innerText = vout.toFixed(2);
-    }
+    // ৩. পটেনশিওমিটার ভ্যালু (০-১০২৩)
+    const pot = Math.round((dNum / 72) * 1023);
 
-    // Initialize
-    calculate();
+    // ডিসপ্লে আপডেট
+    document.getElementById('vout').innerText = vout.toFixed(2) + " V";
+    document.getElementById('pwm').innerText = ocr1a + " (OCR1A)";
+    document.getElementById('pot').innerText = pot;
+}
+
+    // Initial run
+    calc();
 </script>
 
 </body>
