@@ -3,88 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inductor & Wire Designer</title>
+    <title>Live Inductor Designer</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
-        .container { max-width: 500px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .result { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 4px; }
-        .result p { margin: 5px 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        h2 { color: #333; text-align: center; margin-bottom: 20px; }
+        .section { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { font-size: 14px; font-weight: 600; color: #555; margin-bottom: 5px; display: block; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 5px rgba(0,123,255,0.2); }
+        .results { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 5px solid #007bff; }
+        .res-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 15px; }
+        .res-val { font-weight: bold; color: #007bff; }
+        span.unit { font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Inductor Design Tool</h2>
-    
-    <div class="input-group">
-        <label>Max Current (Amperes):</label>
-        <input type="number" id="maxCurrent" placeholder="e.g. 5" step="0.1">
+<div class="card">
+    <h2>Inductor Design (Auto-Calc)</h2>
+
+    <div class="section">
+        <label>Target Inductance (µH)</label>
+        <input type="number" id="L_target" value="100" oninput="calc()">
+        <br>
+        <label>Max Current (Amperes)</label>
+        <input type="number" id="I_max" value="5" oninput="calc()">
     </div>
 
-    <div class="input-group">
-        <label>Target Inductance (µH):</label>
-        <input type="number" id="inductance" placeholder="e.g. 100">
+    <div class="section">
+        <label style="color: #007bff;">Core Dimensions (mm)</label>
+        <div class="grid">
+            <div>
+                <label>Outer Diameter (OD)</label>
+                <input type="number" id="od" value="25" oninput="calc()">
+            </div>
+            <div>
+                <label>Inner Diameter (ID)</label>
+                <input type="number" id="id" value="15" oninput="calc()">
+            </div>
+            <div>
+                <label>Height / Thickness (H)</label>
+                <input type="number" id="height" value="10" oninput="calc()">
+            </div>
+            <div>
+                <label>Relative Permeability (μᵣ)</label>
+                <input type="number" id="mur" value="2000" oninput="calc()">
+            </div>
+        </div>
     </div>
 
-    <div class="input-group">
-        <label>Core AL Value (nH/N²):</label>
-        <input type="number" id="alValue" placeholder="e.g. 50">
-    </div>
-
-    <button onclick="calculateDesign()">Calculate Now</button>
-
-    <div id="output" class="result" style="display:none;">
-        <h4>Calculated Specifications:</h4>
-        <p id="resTurns"></p>
-        <p id="resArea"></p>
-        <p id="resAWG"></p>
-        <p id="resSWG"></p>
-        <p id="resDia"></p>
+    <div class="results">
+        <div class="res-item"><span>Required Turns:</span> <span id="resTurns" class="res-val">0</span></div>
+        <div class="res-item"><span>Wire Diameter:</span> <span id="resDia" class="res-val">0</span> <span class="unit">mm</span></div>
+        <div class="res-item"><span>AWG / SWG:</span> <span id="resGauges" class="res-val">- / -</span></div>
+        <div class="res-item"><span>Core Area (Ae):</span> <span id="resAe" class="res-val">0</span> <span class="unit">mm²</span></div>
     </div>
 </div>
 
 <script>
-function calculateDesign() {
-    const current = parseFloat(document.getElementById('maxCurrent').value);
-    const L_uH = parseFloat(document.getElementById('inductance').value);
-    const Al = parseFloat(document.getElementById('alValue').value);
+function calc() {
+    // Inputs
+    const L_uH = parseFloat(document.getElementById('L_target').value) || 0;
+    const I = parseFloat(document.getElementById('I_max').value) || 0;
+    const OD = parseFloat(document.getElementById('od').value) || 0;
+    const ID = parseFloat(document.getElementById('id').value) || 0;
+    const H = parseFloat(document.getElementById('height').value) || 0;
+    const mur = parseFloat(document.getElementById('mur').value) || 0;
 
-    if(!current || !L_uH || !Al) {
-        alert("Sob gulo ghore thik moto value din.");
-        return;
-    }
+    if (OD <= ID || L_uH <= 0 || mur <= 0) return;
 
-    // 1. Calculate Turns (N = sqrt(L_nH / Al))
-    const L_nH = L_uH * 1000;
-    const turns = Math.ceil(Math.sqrt(L_nH / Al));
-
-    // 2. Calculate Wire Area (Assuming Current Density J = 4 A/mm2)
-    const currentDensity = 4; 
-    const areaNeeded = current / currentDensity; // in mm2
-
-    // 3. Calculate Diameter
-    const diameter = Math.sqrt((4 * areaNeeded) / Math.PI); // in mm
-
-    // 4. AWG & SWG Estimation (Simplified Empirical Formula)
-    // AWG approx: n = -39 * log10(dia_mm / 0.127) / log10(92) + 36
-    let awg = Math.round(-8.74 * Math.log(diameter / 0.127) + 36);
+    // 1. Calculate Core Geometry
+    const Ae = (OD - ID) * H / 2; // Cross sectional area in mm2
+    const le = Math.PI * (OD + ID) / 2; // Mean magnetic path length in mm
     
-    // SWG estimation (Approximated for typical range)
-    let swg = Math.round(diameter > 1 ? 18 - (diameter-1)*5 : 20 + (1-diameter)*10); 
+    // 2. Calculate AL Value (nH/N²)
+    // Formula: AL = (mu0 * mur * Ae) / le
+    const mu0 = 4 * Math.PI * 1e-7;
+    const AL_nH = (mu0 * mur * (Ae * 1e-6) / (le * 1e-3)) * 1e9;
 
-    // Display Results
-    document.getElementById('output').style.display = 'block';
-    document.getElementById('resTurns').innerHTML = `<b>Required Turns:</b> ${turns}`;
-    document.getElementById('resArea').innerHTML = `<b>Required Wire Area:</b> ${areaNeeded.toFixed(3)} mm²`;
-    document.getElementById('resDia').innerHTML = `<b>Wire Diameter:</b> ${diameter.toFixed(3)} mm`;
-    document.getElementById('resAWG').innerHTML = `<b>Recommended AWG:</b> ${awg}`;
-    document.getElementById('resSWG').innerHTML = `<b>Estimated SWG:</b> ${swg}`;
+    // 3. Calculate Turns
+    const turns = Math.ceil(Math.sqrt((L_uH * 1000) / AL_nH));
+
+    // 4. Wire Calculation (Current Density J = 4A/mm2)
+    const areaNeeded = I / 4;
+    const dia = Math.sqrt((4 * areaNeeded) / Math.PI);
+    
+    // AWG Estimation
+    let awg = Math.round(-8.74 * Math.log(dia / 0.127) + 36);
+    // SWG Estimation (Approx)
+    let swg = Math.round(dia > 1 ? 18 - (dia-1)*5 : 20 + (1-dia)*11);
+
+    // Update UI
+    document.getElementById('resTurns').innerText = turns;
+    document.getElementById('resDia').innerText = dia.toFixed(3);
+    document.getElementById('resGauges').innerText = `AWG ${awg} / SWG ${swg}`;
+    document.getElementById('resAe').innerText = Ae.toFixed(2);
 }
+
+// Initial Call
+calc();
 </script>
 
 </body>
