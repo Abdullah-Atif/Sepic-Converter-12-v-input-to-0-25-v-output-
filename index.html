@@ -18,7 +18,7 @@
         .val { font-weight: bold; color: var(--val-color); }
         .pwr-val { font-weight: bold; color: var(--power-color); }
         .code-header { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; background: #34495e; color: white; padding: 10px 15px; border-radius: 8px 8px 0 0; }
-        pre { background: var(--code-bg); color: #dfe6e9; padding: 15px; border-radius: 0 0 8px 8px; overflow-x: auto; font-size: 0.82rem; margin-top: 0; line-height: 1.5; }
+        pre { background: var(--code-bg); color: #dfe6e9; padding: 15px; border-radius: 0 0 8px 8px; overflow-x: auto; font-size: 0.82rem; margin-top: 0; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
         .copy-btn { background: #1abc9c; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: 0.3s; }
         .copy-btn:hover { background: #16a085; }
     </style>
@@ -26,7 +26,7 @@
 <body>
 
 <div class="card">
-    <h2>⚡ SEPIC Advanced Design & Power Pro</h2>
+    <h2>⚡ SEPIC Advanced Design & Code Pro</h2>
 
     <div class="section-title">1. Design Inputs</div>
     <div class="grid">
@@ -47,7 +47,7 @@
             <input type="number" id="fsw" value="10000" oninput="runCalc()">
         </div>
         <div>
-            <label>Estimated Efficiency (%)</label>
+            <label>Efficiency (%)</label>
             <input type="number" id="eff" value="85" oninput="runCalc()">
         </div>
         <div>
@@ -63,24 +63,23 @@
         <div class="res-row"><span>Power Loss:</span> <span style="color: #e53e3e; font-weight: bold;" id="ploss">0 W</span></div>
     </div>
 
-    <div class="section-title">3. Component & Capacitor Analysis</div>
+    <div class="section-title">3. Component Analysis</div>
     <div class="res-box">
         <div class="res-row"><span>Required Coupling Cap (C2):</span> <span class="val" id="c2Val">0 uF</span></div>
         <div class="res-row"><span>Required Filter Cap (C3):</span> <span class="val" id="c3Val">0 uF</span></div>
-        <div class="res-row"><span>Diode Voltage Stress (Vd_max):</span> <span class="val" id="vdMax">0 V</span></div>
-        <div class="res-row"><span>Peak Diode Current (Id_peak):</span> <span class="val" id="idPeak">0 A</span></div>
+        <div class="res-row"><span>Diode Voltage Stress:</span> <span class="val" id="vdMax">0 V</span></div>
+        <div class="res-row"><span>Peak Diode Current:</span> <span class="val" id="idPeak">0 A</span></div>
     </div>
 
-    <div class="section-title">4. System Output & Timer</div>
+    <div class="section-title">4. Arduino Timer & Output</div>
     <div class="res-box" style="background: #fff8f0;">
-        <div class="res-row"><span>Expected Output (Vout):</span> <span class="val" id="vout">0 V</span></div>
-        <div class="res-row"><span>Output Current (Iout):</span> <span class="val" id="iout">0 A</span></div>
-        <div class="res-row"><span>Avg Input Current (Iin):</span> <span class="val" id="iin">0 A</span></div>
-        <div class="res-row"><span>ICR1 (TOP Value):</span> <span class="val" id="icrVal">0</span></div>
+        <div class="res-row"><span>Expected Vout:</span> <span class="val" id="vout">0 V</span></div>
+        <div class="res-row"><span>ICR1 (TOP):</span> <span class="val" id="icrVal">0</span></div>
+        <div class="res-row"><span>OCR1A (Match):</span> <span class="val" id="ocrVal">0</span></div>
     </div>
 
     <div class="code-header">
-        <span>Arduino Code (Dynamic)</span>
+        <span>Arduino Timer 1 Code (Live)</span>
         <button class="copy-btn" onclick="copyCode()">Copy Code</button>
     </div>
     <pre id="arduinoCode"></pre>
@@ -97,56 +96,57 @@
 
         let d = dNum / 100;
         
-        // --- Voltage & Current ---
+        // Voltage & Current
         let vout = (vin * (d / (1 - d))) - 0.6;
         if (vout < 0) vout = 0;
         let iout = vout / rLoad;
         
-        // --- Power Calculations ---
+        // Power
         let pOut = vout * iout;
         let pIn = pOut / eff;
-        let pLoss = pIn - pOut;
         let iInAvg = (vin > 0) ? (pIn / vin) : 0;
 
-        // --- Capacitor & Stress ---
-        let deltaVc = vin * 0.01; 
-        let c2 = (iout * d) / (fsw * deltaVc);
-        let deltaVout = (vout > 0 ? vout : vin) * 0.01;
-        let c3 = iout / (fsw * deltaVout);
+        // Capacitor & Diode
+        let c2 = (iout * d) / (fsw * (vin * 0.01));
+        let c3 = iout / (fsw * (vout > 0 ? vout : 1) * 0.01);
         let vd_max = vin + vout + 0.6;
         let ripple = (vin * d) / (lH * fsw);
         let id_peak = iInAvg + iout + (ripple / 2);
 
-        // --- Timer ---
+        // Timer
         let icr1 = Math.round((16000000 / (fsw * 8)) - 1);
         let ocr1a = Math.round(d * icr1);
 
         // UI Update
         document.getElementById('pout').innerText = pOut.toFixed(2) + " W";
         document.getElementById('pin').innerText = pIn.toFixed(2) + " W";
-        document.getElementById('ploss').innerText = pLoss.toFixed(2) + " W";
+        document.getElementById('ploss').innerText = (pIn - pOut).toFixed(2) + " W";
         document.getElementById('c2Val').innerText = (c2 * 1e6).toFixed(2) + " uF";
         document.getElementById('c3Val').innerText = (c3 * 1e6).toFixed(2) + " uF";
         document.getElementById('vdMax').innerText = vd_max.toFixed(2) + " V";
         document.getElementById('idPeak').innerText = id_peak.toFixed(3) + " A";
         document.getElementById('vout').innerText = vout.toFixed(2) + " V";
-        document.getElementById('iout').innerText = iout.toFixed(3) + " A";
-        document.getElementById('iin').innerText = iInAvg.toFixed(3) + " A";
         document.getElementById('icrVal').innerText = icr1;
-        document.getElementById('ocrVal').innerText = Math.round(d * icr1);
+        document.getElementById('ocrVal').innerText = ocr1a;
 
-        const code = `// SEPIC PWM Controller
-// Freq: ${fsw}Hz | D_max: ${dNum}%
+        // Dynamic Arduino Code
+        const code = `// SEPIC Controller Code
+// Frequency: ${fsw} Hz | Max Duty: ${dNum}%
+const int pwmPin = 9;
+const int potPin = A0;
+
 void setup() {
-  pinMode(9, OUTPUT);
+  pinMode(pwmPin, OUTPUT);
   TCCR1A = 0; TCCR1B = 0; TCNT1 = 0;
+  // Fast PWM Mode 14
   TCCR1A |= (1 << COM1A1) | (1 << WGM11);
-  TCCR1B |= (1 << WGM13) | (1 << WGM12) | (1 << CS11);
-  ICR1 = ${icr1};
+  TCCR1B |= (1 << WGM13) | (1 << WGM12) | (1 << CS11); // Prescaler 8
+  ICR1 = ${icr1}; 
 }
+
 void loop() {
-  int pot = analogRead(A0);
-  OCR1A = map(pot, 0, 1023, 0, ${Math.round(d * icr1)});
+  int pot = analogRead(potPin);
+  OCR1A = map(pot, 0, 1023, 0, ${ocr1a});
   delay(1);
 }`;
         document.getElementById('arduinoCode').innerText = code;
