@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive SEPIC Converter Calculator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background-color: #f6f8fa;
+            color: #24292e;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            border-bottom: 2px solid #e1e4e8;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        fieldset {
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: #fafbfc;
+        }
+        legend {
+            font-weight: bold;
+            color: #0366d6;
+            padding: 0 0.5rem;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .input-group label {
+            flex: 0 0 250px;
+            font-size: 0.9rem;
+            color: #586069;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        .input-group input:focus {
+            border-color: #0366d6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(3,102,214,0.1);
+        }
+        .result-group {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #e1f5fe;
+            border-left: 4px solid #0288d1;
+            border-radius: 4px;
+        }
+        .result-item {
+            display: flex;
+            margin-bottom: 0.5rem;
+        }
+        .result-item-label {
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        .result-item-value {
+            font-family: monospace;
+            color: #0288d1;
+        }
+        .btn-calc {
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            background-color: #2ea44f;
+            color: #fff;
+            border: 1px solid #289246;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-calc:hover {
+            background-color: #2c974b;
+        }
+        .btn-reset {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d5da;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚡️ SEPIC Converter Calculator</h1>
+    <p>Use this tool to design a SEPIC converter, determining the required Duty Cycle and critical inductance values.</p>
+    
+    <fieldset>
+        <legend>Design Inputs</legend>
+        
+        <div class="input-group">
+            <label for="vin">Input Voltage ($V_{in}$) [V]</label>
+            <input type="number" id="vin" value="12" step="0.1" required>
+        </div>
+        
+        <div class="input-group">
+            <label for="vout">Desired Output Voltage ($V_{out}$) [V]</label>
+            <input type="number" id="vout" value="5" step="0.1" required>
+        </div>
+        
+        <div class="input-group">
+            <label for="vd">Diode Forward Voltage Drop ($V_D$) [V]</label>
+            <input type="number" id="vd" value="0.5" step="0.1">
+        </div>
+
+        <div class="input-group">
+            <label for="fsw">Switching Frequency ($f_{sw}$) [kHz]</label>
+            <input type="number" id="fsw" value="100" step="1">
+        </div>
+
+        <div class="input-group">
+            <label for="ripple_factor">Ripple Current Factor (L1/L2) [0-1]</label>
+            <input type="number" id="ripple_factor" value="0.3" step="0.05">
+        </div>
+
+        <div class="input-group">
+            <label for="iout">Output Current ($I_{out}$) [A]</label>
+            <input type="number" id="iout" value="1" step="0.1">
+        </div>
+
+    </fieldset>
+
+    <div style="margin-bottom: 2rem;">
+        <button class="btn-calc" onclick="calculate()">Calculate Now</button>
+        <button class="btn-calc btn-reset" onclick="resetForm()">Reset</button>
+    </div>
+
+    <h2>Calculated Design Parameters</h2>
+    
+    <div id="results" class="result-group">
+        <p>Enter your design parameters above and click "Calculate".</p>
+    </div>
+
+</div>
+
+<script>
+    function calculate() {
+        // Get values and parse as floats
+        const vin = parseFloat(document.getElementById('vin').value);
+        const vout = parseFloat(document.getElementById('vout').value);
+        const vd = parseFloat(document.getElementById('vd').value);
+        const fsw_khz = parseFloat(document.getElementById('fsw').value);
+        const ripple_factor = parseFloat(document.getElementById('ripple_factor').value);
+        const iout = parseFloat(document.getElementById('iout').value);
+
+        // Convert Frequency to Hz
+        const fsw_hz = fsw_khz * 1000;
+
+        // 1. Calculate Duty Cycle (D)
+        // D ≈ (Vout + Vd) / (Vin + Vout + Vd)
+        const denominator = vin + vout + vd;
+        if (denominator <= 0) {
+            document.getElementById('results').innerHTML = `<p style="color:red">Error: Output Voltage must be greater than zero.</p>`;
+            return;
+        }
+        const dutyCycle = (vout + vd) / denominator;
+
+        // 2. Calculate L1 and L2 Critical Inductance
+        // Critical Inductance Formula:
+        // L = (Vin_min * D_max) / (2 * ΔIL * fsw)
+        
+        // Note: For simplicity, assuming ΔIL is the ripple_factor multiplied by 
+        // the average input current I_in_avg.
+        // I_in_avg = I_out * D / (1 - D)
+        const i_in_avg = iout * dutyCycle / (1 - dutyCycle);
+        const delta_il = ripple_factor * i_in_avg;
+
+        let l_crit;
+        if (delta_il > 0 && dutyCycle > 0 && fsw_hz > 0) {
+            // Standard simplified formula for critical inductance
+            l_crit = (vin * dutyCycle) / (2 * delta_il * fsw_hz);
+        } else {
+            l_crit = null; // Cannot calculate or result too large
+        }
+
+        // --- Render Results ---
+        let resultsHtml = `<p>Results based on your inputs:</p>`;
+        
+        // Duty Cycle
+        resultsHtml += `
+            <div class="result-item">
+                <span class="result-item-label">Duty Cycle ($D$):</span>
+                <span class="result-item-value">${dutyCycle.toFixed(3)} (${(dutyCycle * 100).toFixed(1)}%)</span>
+            </div>
+        `;
+
+        // Inductance
+        if (l_crit !== null) {
+            resultsHtml += `
+                <div class="result-item">
+                    <span class="result-item-label">Minimum Inductance ($L_1 = L_2$):</span>
+                    <span class="result-item-value">${(l_crit * 1e6).toFixed(1)} µH</span>
+                </div>
+            `;
+        } else {
+             resultsHtml += `
+                <div class="result-item">
+                    <span class="result-item-label">Minimum Inductance ($L_1 = L_2$):</span>
+                    <span class="result-item-value" style="color:orange">Need I_out > 0</span>
+                </div>
+            `;
+        }
+        
+        // Display results
+        document.getElementById('results').innerHTML = resultsHtml;
+    }
+
+    function resetForm() {
+        document.getElementById('vin').value = 12;
+        document.getElementById('vout').value = 5;
+        document.getElementById('vd').value = 0.5;
+        document.getElementById('fsw').value = 100;
+        document.getElementById('ripple_factor').value = 0.3;
+        document.getElementById('iout').value = 1;
+        document.getElementById('results').innerHTML = `<p>Enter your design parameters above and click "Calculate".</p>`;
+    }
+
+    // Run initial calculation to populate fields
+    calculate();
+</script>
+
+</body>
+</html>
