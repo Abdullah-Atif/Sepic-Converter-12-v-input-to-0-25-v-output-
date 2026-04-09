@@ -3,29 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic SEPIC Lab Tool - BUET EEE</title>
+    <title>Arduino SEPIC Generator - BUET EEE</title>
     <style>
-        :root { --primary: #1a252f; --accent: #2980b9; --bg: #fdfefe; --warn: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background: #eaeff2; padding: 20px; display: flex; justify-content: center; }
-        .card { background: white; width: 100%; max-width: 650px; padding: 35px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border-top: 8px solid var(--accent); }
-        h2 { text-align: center; color: var(--primary); margin-top: 0; }
-        .section-title { color: var(--accent); border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 25px; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #34495e; }
-        input { width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; box-sizing: border-box; transition: 0.3s; font-weight: bold; }
-        input:focus { border-color: var(--accent); outline: none; }
-        .res-box { background: #f4faff; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #d6eaf8; }
-        .res-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'Consolas', monospace; }
-        .val { font-weight: bold; color: #c0392b; }
-        .warning-box { font-size: 0.85rem; margin-top: 15px; padding: 12px; border-radius: 8px; border-left: 5px solid #f1c40f; background: #fffde7; color: #856404; display: none; }
+        :root { --primary: #1a252f; --accent: #2980b9; --bg: #f4f7f6; --code-bg: #2d3436; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 700px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--primary); margin-bottom: 25px; border-bottom: 3px solid var(--accent); display: inline-block; width: 100%; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-weight: bold; }
+        .res-box { background: #eef9ff; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #d1e9ff; }
+        .res-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-family: monospace; }
+        .val { font-weight: bold; color: #d35400; }
+        
+        /* Code Box Styles */
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; background: #34495e; color: white; padding: 10px 15px; border-radius: 8px 8px 0 0; }
+        pre { background: var(--code-bg); color: #dfe6e9; padding: 15px; border-radius: 0 0 8px 8px; overflow-x: auto; font-size: 0.85rem; margin-top: 0; line-height: 1.5; }
+        .copy-btn { background: #1abc9c; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: 0.3s; }
+        .copy-btn:hover { background: #16a085; }
+        .warning { font-size: 0.8rem; color: #856404; background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>⚡ SEPIC Project Advanced Calc</h2>
+    <h2>⚡ SEPIC Lab & Code Generator</h2>
 
-    <div class="section-title">1. Hardware Settings</div>
     <div class="grid">
         <div>
             <label>Input Voltage (Vin) [V]</label>
@@ -36,71 +39,86 @@
             <input type="number" id="loadR" value="33" oninput="runCalc()">
         </div>
         <div>
-            <label>Duty Cycle (%) [0-72]</label>
-            <input type="number" id="duty" value="72" min="0" max="72" oninput="runCalc()">
+            <label>Switching Freq (Hz)</label>
+            <input type="number" id="fsw" value="10000" oninput="runCalc()">
         </div>
         <div>
-            <label>Primary Inductor (L1) [uH]</label>
-            <input type="number" id="lValue" value="70" oninput="runCalc()">
+            <label>Max Duty Cycle (%)</label>
+            <input type="number" id="duty" value="72" oninput="runCalc()">
         </div>
     </div>
 
-    <div id="alertBox" class="warning-box"></div>
+    <div id="warn" class="warning">Warning: Low resistance! Check heat.</div>
 
-    <div class="section-title">2. Real-time Output Data</div>
     <div class="res-box">
-        <div class="res-row"><span>Output Voltage (Vout):</span> <span class="val" id="vout">0 V</span></div>
-        <div class="res-row"><span>Output Current (Iout):</span> <span class="val" id="iout">0 A</span></div>
-        <div class="res-row"><span>Avg Input Current (Iin):</span> <span class="val" id="iin">0 A</span></div>
+        <div class="res-row"><span>Vout (Expected):</span> <span class="val" id="vout">0 V</span></div>
+        <div class="res-row"><span>Ripple (ΔIL):</span> <span class="val" id="ripple">0 A</span></div>
+        <div class="res-row"><span>ICR1 (TOP):</span> <span class="val" id="icrVal">0</span></div>
     </div>
 
-    <div class="section-title">3. Component Stress Levels</div>
-    <div class="res-box">
-        <div class="res-row"><span>Ripple Current (ΔIL):</span> <span class="val" id="ripple">0 A</span></div>
-        <div class="res-row"><span>Diode Peak (Id_max):</span> <span class="val" id="idmax">0 A</span></div>
-        <div class="res-row"><span>Arduino OCR1A Value:</span> <span class="val" id="ocr">0</span></div>
+    <div class="code-header">
+        <span>Arduino Timer 1 Code</span>
+        <button class="copy-btn" onclick="copyCode()">Copy Code</button>
     </div>
+    <pre id="arduinoCode"></pre>
 </div>
 
 <script>
     function runCalc() {
-        let vin = parseFloat(document.getElementById('vin').value) || 0;
-        let rLoad = parseFloat(document.getElementById('loadR').value);
-        let alert = document.getElementById('alertBox');
+        const vin = parseFloat(document.getElementById('vin').value) || 0;
+        const rLoad = parseFloat(document.getElementById('loadR').value) || 1;
+        const fsw = parseFloat(document.getElementById('fsw').value) || 10000;
+        const dMax = parseFloat(document.getElementById('duty').value) || 72;
+        const lH = 70e-6; // 70uH
 
-        // Warning for low resistance without forcing a change
-        if (rLoad < 10 && rLoad > 0) {
-            alert.style.display = "block";
-            alert.innerHTML = "<strong>Warning:</strong> Load resistance is below 10Ω. Calculation might not be accurate and Output Voltage will drop due to high power demand.";
-        } else if (rLoad <= 0) {
-            alert.style.display = "block";
-            alert.innerHTML = "<strong>Error:</strong> Resistance must be greater than 0.";
-        } else {
-            alert.style.display = "none";
-        }
-
-        // Standard calculations continue even with low R
-        const dInput = parseFloat(document.getElementById('duty').value) || 0;
-        const d = dInput / 100;
-        const lH = (parseFloat(document.getElementById('lValue').value) || 70) * 1e-6;
-        const fsw = 10000; 
-
+        // Basic Calc
+        let d = dMax / 100;
         let vout = (vin * (d / (1 - d))) - 0.6;
         if (vout < 0) vout = 0;
-
-        let iout = (rLoad > 0) ? (vout / rLoad) : 0;
-        let iin = iout * (d / (1 - d));
         let ripple = (vin * d) / (lH * fsw);
-        let id_peak = iin + iout + (ripple / 2);
 
-        // Display update
+        // Timer Calc (16MHz, Prescaler 8)
+        let icr1 = Math.round((16000000 / (fsw * 8)) - 1);
+        let maxOCR = Math.round((dMax / 100) * icr1);
+
+        // Display
         document.getElementById('vout').innerText = vout.toFixed(2) + " V";
-        document.getElementById('iout').innerText = iout.toFixed(3) + " A";
-        document.getElementById('iin').innerText = iin.toFixed(3) + " A";
         document.getElementById('ripple').innerText = ripple.toFixed(3) + " A";
-        document.getElementById('idmax').innerText = id_peak.toFixed(3) + " A";
-        document.getElementById('ocr').innerText = Math.round(d * 199);
+        document.getElementById('icrVal').innerText = icr1;
+        document.getElementById('warn').style.display = (rLoad < 10) ? "block" : "none";
+
+        // Generate Code String
+        const code = `// SEPIC PWM Generator (10-bit Timer 1)
+// Frequency: ${fsw} Hz | Max Duty: ${dMax}%
+const int potPin = A0;
+const int pwmPin = 9;
+
+void setup() {
+  pinMode(pwmPin, OUTPUT);
+  TCCR1A = 0; TCCR1B = 0; TCNT1 = 0;
+
+  // Fast PWM Mode 14 (ICR1 as TOP)
+  TCCR1A |= (1 << COM1A1) | (1 << WGM11);
+  TCCR1B |= (1 << WGM13) | (1 << WGM12) | (1 << CS11); // Prescaler 8
+
+  ICR1 = ${icr1}; // Set Frequency
+}
+
+void loop() {
+  int pot = analogRead(potPin);
+  // Map Pot (0-1023) to restricted Duty Cycle (0-${maxOCR})
+  int dutyValue = map(pot, 0, 1023, 0, ${maxOCR});
+  OCR1A = dutyValue;
+  delay(1);
+}`;
+        document.getElementById('arduinoCode').innerText = code;
     }
+
+    function copyCode() {
+        const text = document.getElementById('arduinoCode').innerText;
+        navigator.clipboard.writeText(text).then(() => alert("Code copied to clipboard!"));
+    }
+
     runCalc();
 </script>
 
